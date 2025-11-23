@@ -198,6 +198,11 @@
          data-chapter-index="{{ chapter_index }}"
          data-spine-map="{{ spine_map_json }}"
          style="display: none;"></div>
+    {% if default_ai_data %}
+    <script id="default-answer-data" type="application/json">
+        {{ default_ai_data | tojson }}
+    </script>
+    {% endif %}
 
     <script>
         // Configure marked for safe rendering
@@ -212,6 +217,9 @@
         const bookId = bookData.dataset.bookId;
         const chapterIndex = bookData.dataset.chapterIndex;
         const spineMap = JSON.parse(bookData.dataset.spineMap);
+        const defaultAnswerDataElement = document.getElementById('default-answer-data');
+        const defaultAnswerData = defaultAnswerDataElement ? JSON.parse(defaultAnswerDataElement.textContent) : null;
+        const defaultQuestion = {{ default_ai_question | tojson }};
 
         function findAndGo(filename) {
             const cleanFile = filename.split('#')[0];
@@ -310,12 +318,17 @@
             // Open AI panel automatically
             const panel = document.getElementById('ai-panel');
             panel.style.display = 'flex';
-            
-            // Send default question after a short delay to ensure panel is visible
-            setTimeout(() => {
-                const defaultQuestion = "请用3句话总结当前网页/章节的内容，并对其中专业名词进行解释，请按以下格式输出：\n---------------\n[第一句话]\n---------------\n[第二句话]\n---------------\n[第三句话]\n---------------";
-                sendMessage(defaultQuestion);
-            }, 500);
+
+            if (defaultAnswerData && defaultAnswerData.answer) {
+                // Mirror the usual default QA sequence without hitting the API.
+                addMessage(defaultQuestion, true);
+                addMessage(defaultAnswerData.answer);
+            } else {
+                // Send default question after a short delay to ensure panel is visible
+                setTimeout(() => {
+                    sendMessage(defaultQuestion);
+                }, 500);
+            }
         });
     </script>
 </body>

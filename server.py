@@ -1,8 +1,7 @@
 import os
-import pickle
 import json
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Dict, Any
 import sqlite3
 from pathlib import Path
 
@@ -11,8 +10,14 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from reader3 import Book, BookMetadata, ChapterContent, TOCEntry
 from deepseek_client import DeepSeekClient
+from reader3 import Book, BookMetadata, ChapterContent, TOCEntry
+from book_loader import load_book_pickle
+from ai_defaults import (
+    DEFAULT_AI_QUESTION,
+    MAX_CONTEXT_LENGTH,
+    DEFAULT_CACHE_FILENAME,
+)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -73,6 +78,42 @@ def get_reading_progress(book_id: str) -> Optional[int]:
 # Initialize database on startup
 init_progress_db()
 
+
+@lru_cache(maxsize=50)
+def load_default_ai_cache(book_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Load cached default AI answers for a book if present.
+    """
+    cache_path = Path(BOOKS_DIR) / book_id / DEFAULT_CACHE_FILENAME
+    if not cache_path.exists():
+        return None
+
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Warning: Failed to load AI cache for {book_id}: {e}")
+        return None
+
+
+def get_default_ai_answer(book_id: str, chapter_index: int) -> Optional[Dict[str, Any]]:
+    cache = load_default_ai_cache(book_id)
+    if not cache:
+        return None
+
+    answers = cache.get("answers", {})
+    entry = answers.get(str(chapter_index))
+    if not entry:
+        return None
+
+    return {
+        "question": cache.get("prompt", DEFAULT_AI_QUESTION),
+        "answer": entry.get("answer", ""),
+        "chapter_title": entry.get("title"),
+        "generated_at": entry.get("generated_at", cache.get("generated_at")),
+    }
+
+
 @lru_cache(maxsize=10)
 def load_book_cached(folder_name: str) -> Optional[Book]:
     """
@@ -84,9 +125,7 @@ def load_book_cached(folder_name: str) -> Optional[Book]:
         return None
 
     try:
-        with open(file_path, "rb") as f:
-            book = pickle.load(f)
-        return book
+        return load_book_pickle(Path(file_path))
     except Exception as e:
         print(f"Error loading book {folder_name}: {e}")
         return None
@@ -193,7 +232,9 @@ async def read_chapter_with_ai(request: Request, book_id: str, chapter_index: in
         "book_id": book_id,
         "prev_idx": prev_idx,
         "next_idx": next_idx,
-        "spine_map_json": json.dumps(spine_map)
+        "spine_map_json": json.dumps(spine_map),
+        "default_ai_data": get_default_ai_answer(book_id, chapter_index),
+        "default_ai_question": DEFAULT_AI_QUESTION,
     })
 
 @app.get("/read/{book_id}/images/{image_name}")
@@ -243,9 +284,8 @@ async def chat_with_ai(book_id: str, chapter_index: int, request: Request):
     chapter_text = current_chapter.text
     
     # Limit context length to avoid token limits
-    max_context_length = 2000
-    if len(chapter_text) > max_context_length:
-        chapter_text = chapter_text[:max_context_length] + "..."
+    if len(chapter_text) > MAX_CONTEXT_LENGTH:
+        chapter_text = chapter_text[:MAX_CONTEXT_LENGTH] + "..."
     
     # Get AI response
     try:

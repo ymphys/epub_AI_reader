@@ -39,7 +39,17 @@ uv run reader3.py dracula.epub
 
 This creates the directory `dracula_data`, which registers the book to your local library.
 
-### 2. Set Up AI Integration (Optional)
+### 2. (Recommended) Precompute Default AI Answers
+
+To avoid waiting for the default DeepSeek prompt each time you open a chapter, pre-generate cached answers after `book.pkl` is produced:
+
+```bash
+uv run generate_ai_cache.py dracula_data
+```
+
+You can pass multiple `_data` folders or rerun with `--force` to rebuild every entry. The script reads the processed book, calls DeepSeek once per chapter using the default summary prompt, and stores the results in `dracula_data/default_ai_cache.json`.
+
+### 3. Set Up AI Integration (Optional)
 
 To enable AI features, set your DeepSeek API key:
 
@@ -47,7 +57,7 @@ To enable AI features, set your DeepSeek API key:
 export DEEPSEEK_API_KEY="your_deepseek_api_key_here"
 ```
 
-### 3. Start the Server
+### 4. Start the Server
 
 ```bash
 uv run server.py
