@@ -3,7 +3,7 @@ Shared configuration for default AI interactions.
 """
 
 DEFAULT_AI_QUESTION = (
-    "请用1-3句话总结当前页面的内容，并对其中专业名词进行解释，请按每句话后换行的格式输出："
+    "请用1-2句话总结当前页面的内容，请按每句话后换行的格式输出，请在最后对专业名词进行解释："
 )
 
 # Keep server, cache generator, and UI in sync on context trimming.

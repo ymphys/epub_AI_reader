@@ -146,11 +146,7 @@
     <!-- MAIN CONTENT -->
     <div id="main">
         <div class="content-container">
-            <div class="book-content">
-                {{ current_chapter.content | safe }}
-            </div>
-
-            <div class="chapter-nav">
+            <div class="chapter-nav" style="margin-bottom: 40px;">
                 {% if prev_idx is not none %}
                     <a href="/read-ai/{{ book_id }}/{{ prev_idx }}" class="nav-btn">← Previous</a>
                 {% else %}
@@ -166,6 +162,10 @@
                 {% else %}
                     <span class="nav-btn disabled">Next →</span>
                 {% endif %}
+            </div>
+
+            <div class="book-content">
+                {{ current_chapter.content | safe }}
             </div>
         </div>
     </div>
