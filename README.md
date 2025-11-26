@@ -48,6 +48,7 @@ uv run generate_ai_cache.py dracula_data
 ```
 
 You can pass multiple `_data` folders or rerun with `--force` to rebuild every entry. The script reads the processed book, calls DeepSeek once per chapter using the default summary prompt, and stores the results in `dracula_data/default_ai_cache.json`.
+While reading with AI, every manual Q&A exchange is appended to the same `default_ai_cache.json` under `qa_logs`, so you can review or export your notes later.
 
 ### 3. Set Up AI Integration (Optional)
 
@@ -83,6 +84,7 @@ Visit [localhost:8123](http://localhost:8123/) to see your current Library.
 ### Reading Progress Tracking
 - **Continue Reading**: Automatically resumes from your last read position
 - **Progress Display**: Shows your reading progress in the library
+- **Mark Finished**: Use “Done Reading” in the library to archive books; finished titles move below a divider so you can focus on current ones
 - **Cross-Device**: Progress is saved in a local database
 
 ## Technical Details
