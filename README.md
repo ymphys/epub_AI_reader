@@ -29,6 +29,12 @@ This project was originally 90% vibe coded to illustrate how one can very easily
 
 The project uses [uv](https://docs.astral.sh/uv/). 
 
+### Library Layout
+
+- `library/epubs/` – drop your raw EPUB files here (env override: `LIBRARY_EPUB_DIR`)
+- `library/data/` – processed `_data` folders, AI caches, and `reading_progress.db` live here (env override: `LIBRARY_DATA_DIR`)
+- Set `LIBRARY_ROOT` to move the whole structure elsewhere if needed.
+
 ### 1. Process EPUB Files
 
 Download an EPUB file (e.g., from [Project Gutenberg](https://www.gutenberg.org/)) and process it:
@@ -37,7 +43,7 @@ Download an EPUB file (e.g., from [Project Gutenberg](https://www.gutenberg.org/
 uv run reader3.py dracula.epub
 ```
 
-This creates the directory `dracula_data`, which registers the book to your local library.
+`reader3.py` automatically looks in `library/epubs/` (unless you pass an absolute path) and saves the processed folder as `library/data/dracula_data`.
 
 ### 2. (Recommended) Precompute Default AI Answers
 
@@ -47,7 +53,7 @@ To avoid waiting for the default DeepSeek prompt each time you open a chapter, p
 uv run generate_ai_cache.py dracula_data
 ```
 
-You can pass multiple `_data` folders or rerun with `--force` to rebuild every entry. The script reads the processed book, calls DeepSeek once per chapter using the default summary prompt, and stores the results in `dracula_data/default_ai_cache.json`.
+You can pass multiple `_data` folders or rerun with `--force` to rebuild every entry. The script resolves each argument inside `library/data/`, calls DeepSeek once per chapter using the default summary prompt, and stores the results in `default_ai_cache.json` inside the book’s folder.
 While reading with AI, every manual Q&A exchange is appended to the same `default_ai_cache.json` under `qa_logs`, so you can review or export your notes later.
 
 ### 3. Set Up AI Integration (Optional)
@@ -85,7 +91,7 @@ Visit [localhost:8123](http://localhost:8123/) to see your current Library.
 - **Continue Reading**: Automatically resumes from your last read position
 - **Progress Display**: Shows your reading progress in the library
 - **Mark Finished**: Use “Done Reading” in the library to archive books; finished titles move below a divider so you can focus on current ones
-- **Cross-Device**: Progress is saved in a local database
+- **Cross-Device**: Progress is saved in `library/data/reading_progress.db`
 
 ## Technical Details
 
@@ -122,7 +128,7 @@ MIT
 - Check server logs for initialization messages
 
 ### Reading Progress Issues
-- Progress is stored in `reading_progress.db` SQLite database
+- Progress is stored in `library/data/reading_progress.db` SQLite database
 - Deleting the database file will reset all progress
 
 ### General Issues

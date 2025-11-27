@@ -13,6 +13,9 @@ from urllib.parse import unquote
 import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup, Comment
+from pathlib import Path
+
+from library_paths import EPUB_LIBRARY_DIR, BOOK_DATA_DIR
 
 # --- Data structures ---
 
@@ -172,20 +175,22 @@ def extract_metadata_robust(book_obj) -> BookMetadata:
 
 # --- Main Conversion Logic ---
 
-def process_epub(epub_path: str, output_dir: str) -> Book:
+def process_epub(epub_path: Path, output_dir: Path) -> Book:
+    epub_path = Path(epub_path)
+    output_dir = Path(output_dir)
 
     # 1. Load Book
     print(f"Loading {epub_path}...")
-    book = epub.read_epub(epub_path)
+    book = epub.read_epub(str(epub_path))
 
     # 2. Extract Metadata
     metadata = extract_metadata_robust(book)
 
     # 3. Prepare Output Directories
-    if os.path.exists(output_dir):
+    if output_dir.exists():
         shutil.rmtree(output_dir)
-    images_dir = os.path.join(output_dir, 'images')
-    os.makedirs(images_dir, exist_ok=True)
+    images_dir = output_dir / 'images'
+    images_dir.mkdir(parents=True, exist_ok=True)
 
     # 4. Extract Images & Build Map
     print("Extracting images...")
@@ -199,7 +204,7 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
             safe_fname = "".join([c for c in original_fname if c.isalpha() or c.isdigit() or c in '._-']).strip()
 
             # Save to disk
-            local_path = os.path.join(images_dir, safe_fname)
+            local_path = images_dir / safe_fname
             with open(local_path, 'wb') as f:
                 f.write(item.get_content())
 
@@ -276,15 +281,16 @@ def process_epub(epub_path: str, output_dir: str) -> Book:
         spine=spine_chapters,
         toc=toc_structure,
         images=image_map,
-        source_file=os.path.basename(epub_path),
+        source_file=epub_path.name,
         processed_at=datetime.now().isoformat()
     )
 
     return final_book
 
 
-def save_to_pickle(book: Book, output_dir: str):
-    p_path = os.path.join(output_dir, 'book.pkl')
+def save_to_pickle(book: Book, output_dir: Path):
+    output_dir = Path(output_dir)
+    p_path = output_dir / 'book.pkl'
     with open(p_path, 'wb') as f:
         pickle.dump(book, f)
     print(f"Saved structured data to {p_path}")
@@ -292,16 +298,39 @@ def save_to_pickle(book: Book, output_dir: str):
 
 # --- CLI ---
 
+
+def resolve_epub_input(epub_arg: str) -> Path:
+    candidate = Path(epub_arg).expanduser()
+    if candidate.exists():
+        return candidate
+
+    library_candidate = EPUB_LIBRARY_DIR / epub_arg
+    if library_candidate.exists():
+        return library_candidate
+
+    if not epub_arg.lower().endswith(".epub"):
+        library_candidate = EPUB_LIBRARY_DIR / f"{epub_arg}.epub"
+        if library_candidate.exists():
+            return library_candidate
+
+    raise FileNotFoundError(f"Unable to locate EPUB '{epub_arg}'. Checked {candidate} and {EPUB_LIBRARY_DIR}.")
+
+
+def derive_output_dir(epub_path: Path, override: Optional[str] = None) -> Path:
+    if override:
+        return Path(override).expanduser()
+    return BOOK_DATA_DIR / f"{epub_path.stem}_data"
+
+
 if __name__ == "__main__":
 
     import sys
     if len(sys.argv) < 2:
-        print("Usage: python reader3.py <file.epub>")
+        print("Usage: python reader3.py <file.epub> [output_dir]")
         sys.exit(1)
 
-    epub_file = sys.argv[1]
-    assert os.path.exists(epub_file), "File not found."
-    out_dir = os.path.splitext(epub_file)[0] + "_data"
+    epub_file = resolve_epub_input(sys.argv[1])
+    out_dir = derive_output_dir(epub_file, sys.argv[2] if len(sys.argv) > 2 else None)
 
     book_obj = process_epub(epub_file, out_dir)
     save_to_pickle(book_obj, out_dir)

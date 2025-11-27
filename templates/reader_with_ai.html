@@ -203,6 +203,9 @@
         {{ default_ai_data | tojson }}
     </script>
     {% endif %}
+    <script id="qa-history-data" type="application/json">
+        {{ qa_history | tojson }}
+    </script>
 
     <script>
         // Configure marked for safe rendering
@@ -219,6 +222,8 @@
         const spineMap = JSON.parse(bookData.dataset.spineMap);
         const defaultAnswerDataElement = document.getElementById('default-answer-data');
         const defaultAnswerData = defaultAnswerDataElement ? JSON.parse(defaultAnswerDataElement.textContent) : null;
+        const qaHistoryElement = document.getElementById('qa-history-data');
+        const qaHistory = qaHistoryElement ? JSON.parse(qaHistoryElement.textContent) : [];
         const defaultQuestion = {{ default_ai_question | tojson }};
 
         function findAndGo(filename) {
@@ -243,12 +248,12 @@
             }
         }
 
-        function addMessage(text, isUser = false) {
+        function addMessage(text, isUser = false, timestamp = null) {
             const messagesContainer = document.getElementById('ai-messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = 'message ' + (isUser ? 'user-message' : 'ai-message');
             
-            const time = new Date().toLocaleTimeString();
+            const time = timestamp ? new Date(timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
             
             if (isUser) {
                 // User messages remain as plain text
@@ -319,7 +324,16 @@
             const panel = document.getElementById('ai-panel');
             panel.style.display = 'flex';
 
-            if (defaultAnswerData && defaultAnswerData.answer) {
+            if (qaHistory.length > 0) {
+                qaHistory.forEach(entry => {
+                    if (entry.question) {
+                        addMessage(entry.question, true, entry.asked_at || null);
+                    }
+                    if (entry.answer) {
+                        addMessage(entry.answer, false, entry.answered_at || entry.asked_at || null);
+                    }
+                });
+            } else if (defaultAnswerData && defaultAnswerData.answer) {
                 // Mirror the usual default QA sequence without hitting the API.
                 addMessage(defaultQuestion, true);
                 addMessage(defaultAnswerData.answer);

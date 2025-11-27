@@ -12,6 +12,7 @@ from ai_defaults import (
     DEFAULT_CACHE_FILENAME,
 )
 from book_loader import load_book_pickle
+from library_paths import BOOK_DATA_DIR, candidate_book_dirs
 
 
 def load_book(book_dir: Path):
@@ -20,6 +21,13 @@ def load_book(book_dir: Path):
         raise FileNotFoundError(f"book.pkl not found in {book_dir}")
 
     return load_book_pickle(book_path)
+
+
+def resolve_book_dir(arg: str) -> Path:
+    for candidate in candidate_book_dirs(arg):
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"Unable to find processed folder for '{arg}'. Expected under {BOOK_DATA_DIR}.")
 
 
 def truncate_context(text: str) -> str:
@@ -102,8 +110,9 @@ def main():
 
     client = DeepSeekClient(api_key)
 
-    for book_dir in args.book_dirs:
-        build_cache_for_book(Path(book_dir), client, force=args.force)
+    for book_arg in args.book_dirs:
+        book_dir = resolve_book_dir(book_arg)
+        build_cache_for_book(book_dir, client, force=args.force)
 
 
 if __name__ == "__main__":
