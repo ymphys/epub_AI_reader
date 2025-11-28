@@ -36,6 +36,37 @@ def truncate_context(text: str) -> str:
     return text[:MAX_CONTEXT_LENGTH] + "..."
 
 
+def should_skip_chapter(chapter_title: str, chapter_text: str) -> bool:
+    """Check if chapter should be skipped based on content criteria."""
+    
+    # Check if text is blank or only whitespace
+    if not chapter_text or not chapter_text.strip():
+        return True
+    
+    # Convert to lowercase for case-insensitive matching
+    title_lower = chapter_title.lower()
+    text_lower = chapter_text.lower()
+    
+    # Skip keywords in title
+    skip_keywords = [
+        "cover", "back cover", "references", "bibliography",
+        "thank you", "acknowledgements", "acknowledgments",
+        "contents", "table of contents", "index", "preface",
+        "foreword", "introduction", "appendix"
+    ]
+    
+    for keyword in skip_keywords:
+        if keyword in title_lower:
+            return True
+    
+    # Skip if content is too short (less than 100 words)
+    word_count = len(chapter_text.split())
+    if word_count < 100:
+        return True
+    
+    return False
+
+
 def build_cache_for_book(book_dir: Path, client: DeepSeekClient, force: bool) -> None:
     print(f"\nPreparing default AI cache for {book_dir.name}")
     cache_path = book_dir / DEFAULT_CACHE_FILENAME
@@ -59,6 +90,19 @@ def build_cache_for_book(book_dir: Path, client: DeepSeekClient, force: bool) ->
 
         chapter_title = getattr(chapter, "title", f"Chapter {idx}")
         chapter_text = getattr(chapter, "text", "")
+        
+        # Skip chapters that meet the filtering criteria, but mark them in cache
+        if should_skip_chapter(chapter_title, chapter_text):
+            print(f" - Skipping chapter {idx + 1}/{len(book.spine)}: {chapter_title} (filtered)")
+            # Create an entry marked as filtered
+            answers[key] = {
+                "title": chapter_title,
+                "href": getattr(chapter, "href", ""),
+                "filtered": True,
+                "generated_at": datetime.utcnow().isoformat() + "Z",
+            }
+            continue
+            
         context = truncate_context(chapter_text)
 
         print(f" - Caching chapter {idx + 1}/{len(book.spine)}: {chapter_title}")

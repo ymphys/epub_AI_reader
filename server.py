@@ -142,6 +142,10 @@ def get_default_ai_answer(book_id: str, chapter_index: int) -> Optional[Dict[str
     entry = answers.get(str(chapter_index))
     if not entry:
         return None
+        
+    # Skip if chapter is marked as filtered
+    if entry.get("filtered"):
+        return None
 
     return {
         "question": cache.get("prompt", DEFAULT_AI_QUESTION),
@@ -365,6 +369,24 @@ async def serve_image(book_id: str, image_name: str):
     Serves images specifically for a book.
     The HTML contains <img src="images/pic.jpg">.
     The browser resolves this to /read/{book_id}/images/pic.jpg.
+    """
+    # Security check: ensure book_id is clean
+    safe_book_id = os.path.basename(book_id)
+    safe_image_name = os.path.basename(image_name)
+
+    img_path = BOOKS_DIR / safe_book_id / "images" / safe_image_name
+
+    if not img_path.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    return FileResponse(str(img_path))
+
+@app.get("/read-ai/{book_id}/images/{image_name}")
+async def serve_image_ai(book_id: str, image_name: str):
+    """
+    Serves images specifically for a book in AI reader.
+    The HTML contains <img src="images/pic.jpg">.
+    The browser resolves this to /read-ai/{book_id}/images/pic.jpg.
     """
     # Security check: ensure book_id is clean
     safe_book_id = os.path.basename(book_id)
