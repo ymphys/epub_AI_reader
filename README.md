@@ -1,137 +1,129 @@
-# reader 3 with AI Integration
+# reader 3 与 AI 集成
 
 ![reader3](reader3.png)
 
-A lightweight, self-hosted EPUB reader that lets you read through EPUB books one chapter at a time, now enhanced with DeepSeek AI integration for interactive reading assistance.
+一个轻量、私有部署的 EPUB 阅读器，每次按章节逐步展示书籍内容，并在此基础上引入 DeepSeek AI 作为实时阅读助手。
 
-**Note**: This is a derivative project based on the original reader3, extended with AI capabilities for enhanced reading experience.
+本项目源自 reader3，90% 属于即兴实现；现在我们在其基础上加入 AI 功能，可以同步与 LLM 聊天、获取章节分析与问题答案。
 
-## Overview
+## 概览
 
-This project was originally 90% vibe coded to illustrate how one can very easily [read books together with LLMs](https://x.com/karpathy/status/1990577951671509438). The AI-enhanced version adds DeepSeek integration, allowing you to chat with an AI assistant while reading, getting chapter analysis, explanations, and answers to your questions.
+- **轻量阅读**：根据章节索引逐步呈现 EPUB 内容，界面简洁、高度可自定义。
+- **自托管**：所有数据在本地，兼顾隐私与可控性。
+- **阅读进度跟踪**：本地 SQLite 记录历史章节位置，可在不同设备之间同步（只要复制 `library/data/reading_progress.db`）。
 
-## Features
+## 功能亮点
 
-### Core Reading Features
-- Lightweight EPUB reader with chapter-by-chapter navigation
-- Self-hosted solution for privacy and control
-- Simple library management
-- Reading progress tracking
+### 核心阅读功能
+- 按章节导航、可视化目录和图像渲染。
+- 简单书库管理，已处理的书籍会列在库页面。
+- 阅读进度以章节为单位，自动保存并展示上一章阅读位置。
 
-### AI Integration Features
-- **AI Chat Panel**: Real-time conversation with DeepSeek AI
-- **Context-Aware**: AI can access current chapter content
-- **Chapter Analysis**: Get summaries and explanations
-- **Question Answering**: Ask questions about the content
-- **Chinese Support**: Full Chinese language support
+### AI 加强功能
+- **AI 聊天面板**：DeepSeek 提供实时问答，默认提示帮助总结当前章节并解释术语。
+- **上下文感知**：AI 能读取当前章节文本并基于其提供回答。
+- **章节分析**：支持自动生成摘要、词语解释与概念拆解。
+- **问题解答**：可对当前章节提出任意问题，AI 会在带上下文的基础上回复。
+- **中文支持**：完整中文版界面和默认提示，适配中文阅读习惯。
 
-## Usage
+## 使用说明
 
-The project uses [uv](https://docs.astral.sh/uv/). 
+### 库结构（默认路径）
+- `library/epubs/`：原始 EPUB 文件存放地。
+- `library/data/`：处理后 `_data` 目录、AI 缓存和 `reading_progress.db`。
+- 环境变量 `LIBRARY_ROOT`、`LIBRARY_EPUB_DIR`、`LIBRARY_DATA_DIR` 可覆盖这些路径。
 
-### Library Layout
-
-- `library/epubs/` – drop your raw EPUB files here (env override: `LIBRARY_EPUB_DIR`)
-- `library/data/` – processed `_data` folders, AI caches, and `reading_progress.db` live here (env override: `LIBRARY_DATA_DIR`)
-- Set `LIBRARY_ROOT` to move the whole structure elsewhere if needed.
-
-### 1. Process EPUB Files
-
-Download an EPUB file (e.g., from [Project Gutenberg](https://www.gutenberg.org/)) and process it:
+### 1. 处理 EPUB
 
 ```bash
 uv run reader3.py dracula.epub
 ```
 
-`reader3.py` automatically looks in `library/epubs/` (unless you pass an absolute path) and saves the processed folder as `library/data/dracula_data`.
+`reader3.py` 支持直接引用 `library/epubs/` 下的文件，并把章节数据存储在 `library/data/dracula_data/`。
 
-### 2. (Recommended) Precompute Default AI Answers
-
-To avoid waiting for the default DeepSeek prompt each time you open a chapter, pre-generate cached answers after `book.pkl` is produced:
+### 2. 预先生成 AI 缓存（推荐）
 
 ```bash
 uv run generate_ai_cache.py dracula_data
 ```
 
-You can pass multiple `_data` folders or rerun with `--force` to rebuild every entry. The script resolves each argument inside `library/data/`, calls DeepSeek once per chapter using the default summary prompt, and stores the results in `default_ai_cache.json` inside the book’s folder.
-While reading with AI, every manual Q&A exchange is appended to the same `default_ai_cache.json` under `qa_logs`, so you can review or export your notes later.
+该脚本会遍历每个章节、调用 DeepSeek 的默认提示（超过 2,000 字会截断）、把返回结果写入 `default_ai_cache.json`，读者打开章节时即可即时看到总结与解释（无需等待网络）。
 
-### 3. Set Up AI Integration (Optional)
+默认提示保存也写入缓存文件；如果想重新生成整本书的默认问答，可加 `--force`。
 
-To enable AI features, set your DeepSeek API key:
+### 3. 配置 AI（可选）
+
+确保已设置 DeepSeek API 密钥：
 
 ```bash
 export DEEPSEEK_API_KEY="your_deepseek_api_key_here"
 ```
 
-### 4. Start the Server
+### 4. 启动服务器
 
 ```bash
 uv run server.py
 ```
 
-Visit [localhost:8123](http://localhost:8123/) to see your current Library.
+访问 [http://localhost:8123](http://localhost:8123) 查看书库，选中任意书后点击 “Read with AI”。
 
-## AI-Enhanced Reading
+## AI 阅读体验
 
-### Using the AI Reader
+1. 在书库页点击 “Read with AI”，默认位置从上次阅读章节继续。
+2. AI 侧边栏名为 DeepSeek AI，默认会显示一条问候并自动发送摘要请求。
+3. 你可以手动输入问题或直接回复，AI 会实时返回答案并保存到 `default_ai_cache.json` 中。
+4. 所有章节缓存的问答会随章节加载并在页面刷新后恢复，方便整理笔记。
 
-1. From the library page, click "Read with AI" on any book
-2. The AI-enhanced reader will open with the current chapter
-3. Click the 🤖 button in the bottom-right corner to open the AI chat panel
-4. Ask questions about the current chapter content
+### 示例提问
+- “请总结这一章的主要内容。”
+- “解释一下这个概念。”
+- “这个人物在故事中扮演什么角色？”
+- “这个技术术语是什么意思？”
 
-### Example Questions
-- "请总结这一章的主要内容" (Summarize this chapter)
-- "解释一下这个概念" (Explain this concept)
-- "这个人物在故事中扮演什么角色？" (What role does this character play?)
-- "这个技术术语是什么意思？" (What does this technical term mean?)
+### 阅读进度追踪
+- **继续阅读**：自动恢复至上次所读章节。
+- **进度可视化**：库页面显示章节总数和最后阅读位置。
+- **标记完成**：库页可把书标记为“Done Reading”，已读书籍会移到下方并与当前阅读区隔离。
+- **跨设备同步**：只需复制 `library/data/reading_progress.db` 即可迁移进度。
 
-### Reading Progress Tracking
-- **Continue Reading**: Automatically resumes from your last read position
-- **Progress Display**: Shows your reading progress in the library
-- **Mark Finished**: Use “Done Reading” in the library to archive books; finished titles move below a divider so you can focus on current ones
-- **Cross-Device**: Progress is saved in `library/data/reading_progress.db`
+## 技术细节
 
-## Technical Details
+- `reader3.py`：EPUB 解析器，提取目录、章节和图像。支持内置库路径智能查找。
+- `server.py`：FastAPI 服务器，提供普通阅读页面、AI 阅读页面、图像、聊天 API 与书库接口。
+- `deepseek_client.py`：封装 DeepSeek API 调用。
+- `generate_ai_cache.py`：离线生成默认问答缓存。
+- `templates/reader_with_ai.html`：AI 阅读器 UI。
+- `templates/library.html`：带进度和完成区分的库页面。
 
-### Project Structure
-- `reader3.py` - EPUB parser (original functionality)
-- `server.py` - Enhanced server with AI routes and reading progress
-- `deepseek_client.py` - DeepSeek API client
-- `templates/reader_with_ai.html` - AI-enhanced reader interface
-- `templates/library.html` - Updated library with progress tracking
+## AI 集成说明
 
-### AI Integration
-- Uses DeepSeek Chat API
-- Context length limited to 2000 characters per chapter
-- Real-time conversation support
-- Error handling for API issues
+- 使用 DeepSeek 聊天 API；默认 prompt 限制上下文为 2,000 字。
+- 支持实时对话、默认问答和手动提问自动保存。
+- 错误会在页面和日志中提示，便于排查。
 
-## License
+## 许可证
 
 MIT
 
-## Notes
+## 说明
 
-- This project is provided as-is for inspiration
-- Code is ephemeral - feel free to modify with your LLM
-- No official support is provided
-- AI features require a valid DeepSeek API key
-- Consider API usage costs when using AI features extensively
+- 本项目仅供参考，可自行修改。 
+- 未提供官方技术支持。
+- AI 功能需有效的 DeepSeek API 密钥。
+- 请注意 DeepSeek 的调用次数和费用。
 
-## Troubleshooting
+## 故障排查
 
-### AI Features Not Working
-- Check that `DEEPSEEK_API_KEY` environment variable is set
-- Verify your API key is valid
-- Check server logs for initialization messages
+### AI 功能无法使用
+- 确认 `DEEPSEEK_API_KEY` 已设置。
+- 检查密钥是否仍然有效。
+- 查看服务器日志输出。
 
-### Reading Progress Issues
-- Progress is stored in `library/data/reading_progress.db` SQLite database
-- Deleting the database file will reset all progress
+### 阅读进度出问题
+- 进度保存在 `library/data/reading_progress.db`。
+- 删除该文件会清空所有记录。
 
-### General Issues
-- Ensure all dependencies are installed with `uv sync`
-- Check that EPUB files are properly processed
-- Verify server is running on the correct port (8123)
+### 其他问题
+- 使用 `uv sync` 安装依赖。
+- 确认 EPUB 正确处理并生成 `_data` 目录。
+- 确保 `server.py` 在 8123 端口运行。

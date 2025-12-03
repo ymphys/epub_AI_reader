@@ -155,6 +155,17 @@ def get_default_ai_answer(book_id: str, chapter_index: int) -> Optional[Dict[str
     }
 
 
+def is_chapter_filtered(book_id: str, chapter_index: int) -> bool:
+    cache = load_default_ai_cache(book_id)
+    if not cache:
+        return False
+    answers = cache.get("answers", {})
+    entry = answers.get(str(chapter_index))
+    if not entry:
+        return False
+    return bool(entry.get("filtered"))
+
+
 def get_chapter_qa_history(book_id: str, chapter_index: int) -> List[Dict[str, Any]]:
     cache = load_default_ai_cache(book_id)
     if not cache:
@@ -360,6 +371,7 @@ async def read_chapter_with_ai(request: Request, book_id: str, chapter_index: in
         "spine_map_json": json.dumps(spine_map),
         "default_ai_data": get_default_ai_answer(book_id, chapter_index),
         "default_ai_question": DEFAULT_AI_QUESTION,
+        "chapter_is_filtered": is_chapter_filtered(book_id, chapter_index),
         "qa_history": get_chapter_qa_history(book_id, chapter_index),
     })
 

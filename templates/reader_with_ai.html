@@ -197,6 +197,7 @@
          data-book-id="{{ book_id }}" 
          data-chapter-index="{{ chapter_index }}"
          data-spine-map="{{ spine_map_json }}"
+         data-chapter-filtered="{{ 'true' if chapter_is_filtered else 'false' }}"
          style="display: none;"></div>
     {% if default_ai_data %}
     <script id="default-answer-data" type="application/json">
@@ -225,6 +226,7 @@
         const qaHistoryElement = document.getElementById('qa-history-data');
         const qaHistory = qaHistoryElement ? JSON.parse(qaHistoryElement.textContent) : [];
         const defaultQuestion = {{ default_ai_question | tojson }};
+        const chapterFiltered = bookData.dataset.chapterFiltered === 'true';
 
         function findAndGo(filename) {
             const cleanFile = filename.split('#')[0];
@@ -333,6 +335,8 @@
                         addMessage(entry.answer, false, entry.answered_at || entry.asked_at || null);
                     }
                 });
+            } else if (chapterFiltered) {
+                addMessage('当前章节已被过滤，默认问题不会自动发送；如需帮助，请手动提问。');
             } else if (defaultAnswerData && defaultAnswerData.answer) {
                 // Mirror the usual default QA sequence without hitting the API.
                 addMessage(defaultQuestion, true);
