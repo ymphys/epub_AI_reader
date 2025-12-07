@@ -45,6 +45,9 @@
         .ai-send-btn { width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; margin-top: 10px; cursor: pointer; }
         .ai-send-btn:hover { background: #2980b9; }
         .ai-send-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .ai-retry-btn { width: 100%; padding: 10px; background: #f39c12; color: white; border: none; border-radius: 4px; margin-top: 10px; cursor: pointer; display: none; }
+        .ai-retry-btn:hover { background: #d98307; }
+        .ai-retry-btn:disabled { background: #f0b27a; cursor: not-allowed; }
 
         /* Message Styles */
         .message { margin-bottom: 15px; padding: 10px; border-radius: 8px; max-width: 90%; }
@@ -186,6 +189,7 @@
         <div class="ai-input-container">
             <textarea class="ai-input" id="ai-input" placeholder="输入您的问题..."></textarea>
             <button class="ai-send-btn" id="ai-send-btn" onclick="sendMessage()">发送</button>
+            <button class="ai-retry-btn" id="ai-retry-btn" type="button" onclick="retryLastQuestion()">重试上一个问题</button>
         </div>
     </div>
 
@@ -227,7 +231,26 @@
         const qaHistory = qaHistoryElement ? JSON.parse(qaHistoryElement.textContent) : [];
         const defaultQuestion = {{ default_ai_question | tojson }};
         const chapterFiltered = bookData.dataset.chapterFiltered === 'true';
+        const retryButton = document.getElementById('ai-retry-btn');
+        let lastFailedQuestion = null;
 
+        function showRetry() {
+            if (!retryButton) return;
+            retryButton.style.display = 'block';
+            retryButton.disabled = false;
+        }
+
+        function hideRetry() {
+            if (!retryButton) return;
+            retryButton.style.display = 'none';
+            retryButton.disabled = true;
+        }
+
+        function retryLastQuestion() {
+            if (!lastFailedQuestion) return;
+            retryButton.disabled = true;
+            sendMessage(lastFailedQuestion);
+        }
         function findAndGo(filename) {
             const cleanFile = filename.split('#')[0];
             const idx = spineMap[cleanFile];
@@ -282,12 +305,19 @@
             
             if (!userMessage) return;
             
+            if (!message) {
+                hideRetry();
+            }
+            
             // Add user message
             addMessage(userMessage, true);
             if (!message) {
                 input.value = '';
             }
             button.disabled = true;
+            if (retryButton) {
+                retryButton.disabled = true;
+            }
             
             try {
                 const response = await fetch('/api/chat/' + bookId + '/' + chapterIndex, {
@@ -304,11 +334,18 @@
                 
                 const data = await response.json();
                 addMessage(data.response);
+                lastFailedQuestion = null;
+                hideRetry();
                 
             } catch (error) {
                 addMessage('抱歉，发生了错误：' + error.message);
+                lastFailedQuestion = userMessage;
+                showRetry();
             } finally {
                 button.disabled = false;
+                if (retryButton) {
+                    retryButton.disabled = false;
+                }
             }
         }
 
@@ -325,6 +362,7 @@
             // Open AI panel automatically
             const panel = document.getElementById('ai-panel');
             panel.style.display = 'flex';
+            hideRetry();
 
             if (qaHistory.length > 0) {
                 qaHistory.forEach(entry => {

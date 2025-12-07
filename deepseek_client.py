@@ -32,9 +32,9 @@ class DeepSeekClient:
             result = response.json()
             return result["choices"][0]["message"]["content"]
         except requests.exceptions.RequestException as e:
-            return f"API 请求错误: {str(e)}"
+            raise RuntimeError(f"API 请求错误: {str(e)}")
         except (KeyError, IndexError) as e:
-            return f"API 响应解析错误: {str(e)}"
+            raise RuntimeError(f"API 响应解析错误: {str(e)}")
     
     def chat_with_context(self, user_message: str, book_context: str = "", chapter_title: str = "") -> str:
         """

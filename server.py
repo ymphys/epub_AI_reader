@@ -75,16 +75,23 @@ def save_reading_progress(book_id: str, chapter_index: int):
     conn.commit()
     conn.close()
 
-def get_reading_progress(book_id: str) -> Optional[int]:
-    """Get reading progress for a book."""
+def get_reading_info(book_id: str) -> tuple[Optional[int], Optional[str]]:
+    """Return chapter index and timestamp for a book."""
     conn = sqlite3.connect(PROGRESS_DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT chapter_index FROM reading_progress WHERE book_id = ?
+        SELECT chapter_index, last_read FROM reading_progress WHERE book_id = ?
     ''', (book_id,))
     result = cursor.fetchone()
     conn.close()
-    return result[0] if result else None
+    if not result:
+        return None, None
+    return result[0], result[1]
+
+
+def get_reading_progress(book_id: str) -> Optional[int]:
+    chapter_index, _ = get_reading_info(book_id)
+    return chapter_index
 
 
 def set_book_done(book_id: str, done: bool):
@@ -268,7 +275,7 @@ async def library_view(request: Request):
                 # Try to load it to get the title
                 book = load_book_cached(folder.name)
                 if book:
-                    last_chapter = get_reading_progress(folder.name)
+                    last_chapter, last_read_time = get_reading_info(folder.name)
                     done = is_book_done(folder.name)
                     book_info = {
                         "id": folder.name,
@@ -276,12 +283,16 @@ async def library_view(request: Request):
                         "author": ", ".join(book.metadata.authors),
                         "chapters": len(book.spine),
                         "last_chapter": last_chapter,
+                        "last_read_time": last_read_time,
                         "is_done": done,
                     }
                     if done:
                         completed_books.append(book_info)
                     else:
                         current_books.append(book_info)
+
+    current_books.sort(key=lambda book: book.get("last_read_time") or "", reverse=True)
+    completed_books.sort(key=lambda book: book.get("last_read_time") or "", reverse=True)
 
     context = {
         "request": request,
