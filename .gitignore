@@ -9,6 +9,10 @@ wheels/
 # Virtual environments
 .venv
 
+.env
+
 # Custom
 *_data/
 *.epub
+
+start.sh
