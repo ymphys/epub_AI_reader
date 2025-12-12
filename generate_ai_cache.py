@@ -1,9 +1,10 @@
 import argparse
 import json
 import os
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 from deepseek_client import DeepSeekClient
 from ai_defaults import (
@@ -36,35 +37,48 @@ def truncate_context(text: str) -> str:
     return text[:MAX_CONTEXT_LENGTH] + "..."
 
 
-def should_skip_chapter(chapter_title: str, chapter_text: str) -> bool:
-    """Check if chapter should be skipped based on content criteria."""
-    
-    # Check if text is blank or only whitespace
-    if not chapter_text or not chapter_text.strip():
-        return True
-    
-    # Convert to lowercase for case-insensitive matching
-    title_lower = chapter_title.lower()
-    text_lower = chapter_text.lower()
-    
-    # Skip keywords in title
-    skip_keywords = [
-        "cover", "back cover", "references", "bibliography",
-        "thank you", "acknowledgements", "acknowledgments",
-        "contents", "table of contents", "index", "preface",
-        "foreword", "introduction", "appendix"
-    ]
-    
-    for keyword in skip_keywords:
+MIN_WORD_COUNT = 100
+
+TITLE_SKIP_KEYWORDS = [
+    ("cover", "title_contains_cover"),
+    ("封面", "title_contains_cover"),
+    ("back cover", "title_contains_back_cover"),
+    ("references", "title_contains_references"),
+    ("参考文献", "title_contains_references"),
+    ("bibliography", "title_contains_bibliography"),
+    ("参考书目", "title_contains_bibliography"),
+    ("acknowledgements", "title_contains_acknowledgements"),
+    ("acknowledgments", "title_contains_acknowledgements"),
+    ("致谢", "title_contains_acknowledgements"),
+    ("table of contents", "title_contains_contents"),
+    ("contents", "title_contains_contents"),
+    ("目录", "title_contains_contents"),
+    ("content", "title_contains_contents"),
+    ("thank you", "title_contains_thank_you"),
+    ("致谢词", "title_contains_thank_you"),
+]
+
+
+def get_filter_reason(chapter_title: str, chapter_text: str) -> Optional[str]:
+    """Return why a chapter would be filtered, or None if it should be kept."""
+    text = chapter_text or ""
+    stripped_text = text.strip()
+    title = (chapter_title or "").strip()
+
+    if not stripped_text:
+        return "empty_text"
+
+    title_lower = title.lower()
+
+    for keyword, reason in TITLE_SKIP_KEYWORDS:
         if keyword in title_lower:
-            return True
-    
-    # Skip if content is too short (less than 100 words)
-    word_count = len(chapter_text.split())
-    if word_count < 100:
-        return True
-    
-    return False
+            return reason
+
+    word_count = len(stripped_text.split())
+    if word_count < MIN_WORD_COUNT:
+        return f"too_short ({word_count} words)"
+
+    return None
 
 
 def build_cache_for_book(book_dir: Path, client: DeepSeekClient, force: bool) -> None:
@@ -81,6 +95,7 @@ def build_cache_for_book(book_dir: Path, client: DeepSeekClient, force: bool) ->
 
     book = load_book(book_dir)
     answers = {} if force else existing_data.get("answers", {})
+    filter_stats: Counter[str] = Counter()
 
     for idx, chapter in enumerate(book.spine):
         key = str(idx)
@@ -90,19 +105,23 @@ def build_cache_for_book(book_dir: Path, client: DeepSeekClient, force: bool) ->
 
         chapter_title = getattr(chapter, "title", f"Chapter {idx}")
         chapter_text = getattr(chapter, "text", "")
-        
-        # Skip chapters that meet the filtering criteria, but mark them in cache
-        if should_skip_chapter(chapter_title, chapter_text):
-            print(f" - Skipping chapter {idx + 1}/{len(book.spine)}: {chapter_title} (filtered)")
-            # Create an entry marked as filtered
+
+        filter_reason = get_filter_reason(chapter_title, chapter_text)
+        if filter_reason:
+            print(
+                f" - Skipping chapter {idx + 1}/{len(book.spine)}: {chapter_title} "
+                f"(filtered: {filter_reason})"
+            )
             answers[key] = {
                 "title": chapter_title,
                 "href": getattr(chapter, "href", ""),
                 "filtered": True,
+                "filter_reason": filter_reason,
                 "generated_at": datetime.utcnow().isoformat() + "Z",
             }
+            filter_stats[filter_reason] += 1
             continue
-            
+
         context = truncate_context(chapter_text)
 
         print(f" - Caching chapter {idx + 1}/{len(book.spine)}: {chapter_title}")
@@ -125,6 +144,11 @@ def build_cache_for_book(book_dir: Path, client: DeepSeekClient, force: bool) ->
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "answers": answers,
     }
+
+    if filter_stats:
+        print("Filter summary:")
+        for reason, count in filter_stats.items():
+            print(f"   {count} chapter(s) filtered due to {reason}")
 
     with open(cache_path, "w", encoding="utf-8") as f:
         json.dump(cache_payload, f, ensure_ascii=False, indent=2)
