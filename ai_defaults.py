@@ -7,7 +7,7 @@ DEFAULT_AI_QUESTION = (
 )
 
 # Keep server, cache generator, and UI in sync on context trimming.
-MAX_CONTEXT_LENGTH = 2000
+MAX_CONTEXT_LENGTH = 5000
 
 # Stored in each processed book folder, next to book.pkl.
 DEFAULT_CACHE_FILENAME = "default_ai_cache.json"

@@ -1,6 +1,8 @@
 # reader 3 与 AI 集成
 
-![reader3](reader3.png)
+<img src="reader3-1.png" alt="reader3" style="zoom:60%;" />
+
+<img src="reader3-2.png" alt="reader3" style="zoom:65%;" />
 
 一个轻量、私有部署的 EPUB 阅读器，每次按章节逐步展示书籍内容，并在此基础上引入 DeepSeek AI 作为实时阅读助手。
 
