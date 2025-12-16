@@ -1,101 +1,282 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Library</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f4f9; margin: 0; padding: 40px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
-        .section-title { margin-top: 30px; color: #2c3e50; font-size: 1.3em; }
-        .book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; margin-top: 15px; }
-        .book-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: transform 0.2s; }
-        .book-title { font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
-        .book-meta { color: #666; font-size: 0.9em; margin-bottom: 15px; }
-        .progress-info { color: #27ae60; font-size: 0.85em; margin-bottom: 10px; font-weight: 500; }
-        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
-        .btn { display: inline-block; color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px; font-size: 0.9em; text-align: center; }
-        .btn-primary { background: #27ae60; }
-        .btn-primary:hover { background: #219955; }
-        .btn-secondary { background: #3498db; }
-        .btn-secondary:hover { background: #2980b9; }
-        .btn-outline { border: 1px solid #c0392b; color: #c0392b; background: transparent; cursor: pointer; }
-        .btn-outline:hover { background: #c0392b; color: #fff; }
-        .btn-muted { border: 1px solid #7f8c8d; color: #7f8c8d; background: transparent; cursor: pointer; }
-        .btn-muted:hover { background: #7f8c8d; color: #fff; }
-        .book-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-        .library-divider { margin: 40px 0 20px; border: none; border-top: 2px dashed #bdc3c7; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f4f4f9;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        .section-title {
+            margin-top: 30px;
+            color: #2c3e50;
+            font-size: 1.3em;
+        }
+
+        .book-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .book-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .book-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .book-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .progress-info {
+            color: #27ae60;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #27ae60;
+        }
+
+        .btn-primary:hover {
+            background: #219955;
+        }
+
+        .btn-secondary {
+            background: #3498db;
+        }
+
+        .btn-secondary:hover {
+            background: #2980b9;
+        }
+
+        .btn-outline {
+            border: 1px solid #c0392b;
+            color: #c0392b;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .btn-outline:hover {
+            background: #c0392b;
+            color: #fff;
+        }
+
+        .btn-muted {
+            border: 1px solid #7f8c8d;
+            color: #7f8c8d;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .btn-muted:hover {
+            background: #7f8c8d;
+            color: #fff;
+        }
+
+        .book-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .library-divider {
+            margin: 40px 0 20px;
+            border: none;
+            border-top: 2px dashed #bdc3c7;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
+        <form id="upload-form" method="post" enctype="multipart/form-data"
+            style="margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);">
+            <label style="font-weight: 500; color: #2c3e50;">上传新书（epub）:</label>
+            <input type="file" name="file" accept=".epub" required style="margin: 0 10px;">
+            <button type="submit" class="btn btn-primary">上传</button>
+            <span id="upload-status" style="margin-left: 15px; color: #888; font-size: 0.95em;"></span>
+        </form>
         <h1>Library</h1>
 
         {% if not current_books and not completed_books %}
-            <p>No processed books found. Run <code>reader3.py</code> on an epub first.</p>
+        <p>No processed books found. Run <code>reader3.py</code> on an epub first.</p>
         {% endif %}
 
         {% if current_books %}
-            <div class="section-title">Currently Reading</div>
-            <div class="book-grid">
-                {% for book in current_books %}
-                <div class="book-card">
-                    <div class="book-title">{{ book.title }}</div>
-                    <div class="book-meta">
-                        {{ book.author }}<br>
-                        {{ book.chapters }} sections
-                    </div>
-                    
-                    {% if book.last_chapter is not none %}
-                        <div class="progress-info">
-                            📖 Last read: Section {{ book.last_chapter + 1 }} of {{ book.chapters }}
-                        </div>
-                    {% endif %}
-
-                    <div class="btn-group">
-                        <a href="/read-ai/{{ book.id }}" class="btn btn-primary">
-                            {% if book.last_chapter is not none %}Continue Reading{% else %}Read with AI{% endif %}
-                        </a>
-                        <a href="/read-ai/{{ book.id }}/0" class="btn btn-secondary">Start from Beginning</a>
-                        <button class="btn btn-outline" onclick="updateBookStatus('{{ book.id }}', true)">
-                            Done Reading
-                        </button>
-                    </div>
+        <div class="section-title">Currently Reading</div>
+        <div class="book-grid">
+            {% for book in current_books %}
+            <div class="book-card">
+                <div class="book-title">{{ book.title }}</div>
+                <div class="book-meta">
+                    {{ book.author }}<br>
+                    {{ book.chapters }} sections
                 </div>
-                {% endfor %}
+
+                {% if book.last_chapter is not none %}
+                <div class="progress-info">
+                    📖 Last read: Section {{ book.last_chapter + 1 }} of {{ book.chapters }}
+                </div>
+                {% endif %}
+
+                <div class="btn-group">
+                    <a href="/read-ai/{{ book.id }}" class="btn btn-primary">
+                        {% if book.last_chapter is not none %}Continue Reading{% else %}Read with AI{% endif %}
+                    </a>
+                    <a href="/read-ai/{{ book.id }}/0" class="btn btn-secondary">Start from Beginning</a>
+                    <button class="btn btn-outline" onclick="updateBookStatus('{{ book.id }}', true)">
+                        Done Reading
+                    </button>
+                </div>
             </div>
+            {% endfor %}
+        </div>
         {% endif %}
 
         {% if completed_books %}
-            <hr class="library-divider">
-            <div class="section-title">Finished</div>
-            <div class="book-grid">
-                {% for book in completed_books %}
-                <div class="book-card">
-                    <div class="book-title">{{ book.title }}</div>
-                    <div class="book-meta">
-                        {{ book.author }}<br>
-                        {{ book.chapters }} sections
-                    </div>
-                    {% if book.last_chapter is not none %}
-                        <div class="progress-info">
-                            ✅ Completed at Section {{ book.last_chapter + 1 }} of {{ book.chapters }}
-                        </div>
-                    {% endif %}
-                    <div class="btn-group">
-                        <a href="/read-ai/{{ book.id }}" class="btn btn-secondary">Review with AI</a>
-                        <button class="btn btn-muted" onclick="updateBookStatus('{{ book.id }}', false)">
-                            Move Back to Reading
-                        </button>
-                    </div>
+        <hr class="library-divider">
+        <div class="section-title">Finished</div>
+        <div class="book-grid">
+            {% for book in completed_books %}
+            <div class="book-card">
+                <div class="book-title">{{ book.title }}</div>
+                <div class="book-meta">
+                    {{ book.author }}<br>
+                    {{ book.chapters }} sections
                 </div>
-                {% endfor %}
+                {% if book.last_chapter is not none %}
+                <div class="progress-info">
+                    ✅ Completed at Section {{ book.last_chapter + 1 }} of {{ book.chapters }}
+                </div>
+                {% endif %}
+                <div class="btn-group">
+                    <a href="/read-ai/{{ book.id }}" class="btn btn-secondary">Review with AI</a>
+                    <button class="btn btn-muted" onclick="updateBookStatus('{{ book.id }}', false)">
+                        Move Back to Reading
+                    </button>
+                </div>
             </div>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
     <script>
+        let cachePollerId = null;
+
+        function clearCachePoller() {
+            if (cachePollerId) {
+                clearInterval(cachePollerId);
+                cachePollerId = null;
+            }
+        }
+
+        async function updateCacheStatus(slug, { suppressError = false } = {}) {
+            const status = document.getElementById('upload-status');
+            try {
+                const resp = await fetch(`/api/cache-status/${encodeURIComponent(slug)}`);
+                if (!resp.ok) {
+                    throw new Error('无法读取缓存状态');
+                }
+                const data = await resp.json();
+                if (data.status === 'ready') {
+                    status.textContent = 'AI缓存完成！请开始阅读（可刷新页面查看新书）。';
+                    clearCachePoller();
+                } else if (data.status === 'failed') {
+                    status.textContent = 'AI缓存生成失败，请稍后重试或手动执行缓存脚本。';
+                    clearCachePoller();
+                } else if (data.status === 'processing') {
+                    status.textContent = 'AI缓存正在生成中...';
+                } else {
+                    status.textContent = 'AI缓存已排队，稍后将开始处理。';
+                }
+            } catch (err) {
+                if (!suppressError) {
+                    status.textContent = '无法查询缓存状态: ' + err.message;
+                }
+            }
+        }
+
+        function startCacheStatusPoll(slug) {
+            clearCachePoller();
+            updateCacheStatus(slug, { suppressError: true });
+            cachePollerId = setInterval(() => updateCacheStatus(slug, { suppressError: true }), 3000);
+        }
+
+        // 上传表单处理
+        document.getElementById('upload-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = e.target;
+            const fileInput = form.querySelector('input[type="file"]');
+            const status = document.getElementById('upload-status');
+            if (!fileInput.files.length) return;
+            const data = new FormData();
+            data.append('file', fileInput.files[0]);
+            status.textContent = '上传中...';
+            try {
+                const resp = await fetch('/upload', {
+                    method: 'POST',
+                    body: data
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || '上传失败');
+                }
+                const filename = fileInput.files[0].name;
+                const slug = filename.replace(/\.epub$/i, '');
+                status.textContent = '上传成功，AI缓存已在后台启动...';
+                startCacheStatusPoll(slug);
+            } catch (err) {
+                status.textContent = '上传失败: ' + err.message;
+            }
+        });
         async function updateBookStatus(bookId, done) {
             try {
                 const response = await fetch(`/api/book-status/${bookId}`, {
@@ -115,4 +296,5 @@
         }
     </script>
 </body>
+
 </html>

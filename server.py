@@ -1,13 +1,16 @@
-import os
 import json
+import os
+import shutil
 import sqlite3
+import subprocess
 import threading
+import sys
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -20,7 +23,7 @@ from ai_defaults import (
     MAX_CONTEXT_LENGTH,
     DEFAULT_CACHE_FILENAME,
 )
-from library_paths import BOOK_DATA_DIR, READING_DB_PATH
+from library_paths import BOOK_DATA_DIR, EPUB_LIBRARY_DIR, READING_DB_PATH
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -28,6 +31,11 @@ templates = Jinja2Templates(directory="templates")
 # Where are the book folders located?
 BOOKS_DIR = BOOK_DATA_DIR
 CACHE_WRITE_LOCK = threading.Lock()
+CACHE_STATUS_LOCK = threading.Lock()
+CACHE_STATUS: Dict[str, str] = {}
+PROJECT_ROOT = Path(__file__).resolve().parent
+RUNNER_SCRIPT = PROJECT_ROOT / "runner.py"
+UPLOAD_DIR = EPUB_LIBRARY_DIR
 
 # DeepSeek API Configuration
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
@@ -114,6 +122,99 @@ def is_book_done(book_id: str) -> bool:
     row = cursor.fetchone()
     conn.close()
     return bool(row[0]) if row else False
+
+
+def _find_latest_data_folder_for_slug(slug: str) -> Optional[Path]:
+    if not BOOKS_DIR.exists():
+        return None
+
+    candidates = [
+        entry for entry in BOOKS_DIR.iterdir()
+        if entry.is_dir() and entry.name.startswith(slug) and entry.name.endswith("_data")
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda entry: entry.stat().st_mtime)
+
+
+def _set_cache_status(slug: str, status: str) -> None:
+    with CACHE_STATUS_LOCK:
+        CACHE_STATUS[slug] = status
+
+
+def _run_runner_for_epub(epub_path: Path) -> None:
+    """
+    Run the existing runner.py to parse an EPUB and build the AI cache.
+    """
+    if not RUNNER_SCRIPT.exists():
+        print(f"[upload] runner.py missing, cannot process {epub_path}")
+        return
+
+    print(f"[upload] Starting runner for {epub_path.name}")
+    slug = epub_path.stem
+    _set_cache_status(slug, "processing")
+    try:
+        subprocess.run(
+            [sys.executable, str(RUNNER_SCRIPT), str(epub_path)],
+            check=True,
+            cwd=str(PROJECT_ROOT),
+        )
+        print(f"[upload] Runner finished for {epub_path.name}")
+        _set_cache_status(slug, "ready")
+    except subprocess.CalledProcessError as exc:
+        print(f"[upload] Runner failed for {epub_path.name}: {exc}")
+        _set_cache_status(slug, "failed")
+
+
+@app.post("/upload")
+async def upload_book(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+    """
+    Accept a new EPUB upload and schedule runner.py to process it.
+    """
+    filename = Path(file.filename).name
+    if not filename.lower().endswith(".epub"):
+        raise HTTPException(status_code=400, detail="Only EPUB files are accepted.")
+
+    target_path = UPLOAD_DIR / filename
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    file.file.seek(0)
+
+    with target_path.open("wb") as dest:
+        shutil.copyfileobj(file.file, dest)
+
+    background_tasks.add_task(_run_runner_for_epub, target_path)
+    print(f"[upload] Queued {target_path.name} for processing")
+    return {"status": "queued", "filename": target_path.name}
+
+
+@app.get("/api/cache-status/{slug}")
+async def cache_status(slug: str):
+    """
+    Report the AI cache generation status for a given book slug (epub name without extension).
+    """
+    folder = _find_latest_data_folder_for_slug(slug)
+    cache_ready = False
+    folder_name = folder.name if folder else None
+    cache_path = folder / DEFAULT_CACHE_FILENAME if folder else None
+    if cache_path and cache_path.exists():
+        cache_ready = True
+
+    with CACHE_STATUS_LOCK:
+        status = CACHE_STATUS.get(slug)
+
+    if status == "processing" and cache_ready:
+        status = "ready"
+        _set_cache_status(slug, "ready")
+
+    if not status:
+        status = "ready" if cache_ready else "pending"
+
+    return {
+        "book_slug": slug,
+        "status": status,
+        "cache_ready": cache_ready,
+        "data_folder": folder_name,
+    }
 
 # Initialize database on startup
 init_progress_db()
