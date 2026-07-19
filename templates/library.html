@@ -1,73 +1,192 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hans">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Library</title>
     <style>
+        :root {
+            color-scheme: light dark;
+
+            --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+            --ease-press: cubic-bezier(0.4, 0, 0.2, 1);
+
+            --bg: #f5f5f7;
+            --fg: #1d1d1f;
+            --card: #ffffff;
+            --card-border: rgba(0, 0, 0, 0.06);
+            --card-shadow: rgba(0, 0, 0, 0.08);
+            --card-hover-shadow: rgba(0, 0, 0, 0.14);
+            --accent: #0071e3;
+            --accent-hover: #0077ed;
+            --accent-secondary: #5e5ce6;
+            --meta: #6e6e73;
+            --success: #34c759;
+            --danger: #ff3b30;
+            --muted: #8e8e93;
+            --link: #0071e3;
+            --surface: rgba(255, 255, 255, 0.72);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000;
+                --fg: #f5f5f7;
+                --card: #1c1c1e;
+                --card-border: rgba(255, 255, 255, 0.08);
+                --card-shadow: rgba(0, 0, 0, 0.4);
+                --card-hover-shadow: rgba(0, 0, 0, 0.5);
+                --accent: #0a84ff;
+                --accent-hover: #409cff;
+                --accent-secondary: #5e5ce6;
+                --meta: #98989d;
+                --success: #30d158;
+                --danger: #ff453a;
+                --muted: #8e8e93;
+                --link: #0a84ff;
+                --surface: rgba(28, 28, 30, 0.72);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #f4f4f9;
             margin: 0;
-            padding: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            font-optical-sizing: auto;
+            line-height: 1.6;
+            background: var(--bg);
+            color: var(--fg);
+            -webkit-font-smoothing: antialiased;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 960px;
             margin: 0 auto;
+            padding: 2.5rem 1.5rem 4rem;
+        }
+
+        /* Upload Form — translucent material */
+        #upload-form {
+            margin-bottom: 2.5rem;
+            padding: 1.5rem 1.75rem;
+            border-radius: 18px;
+            background: var(--surface);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 24px var(--card-shadow);
+            transition: box-shadow 0.4s var(--ease-spring);
+        }
+
+        #upload-form:hover {
+            box-shadow: 0 8px 32px var(--card-hover-shadow);
+        }
+
+        #upload-form label {
+            font-weight: 600;
+            color: var(--fg);
+            font-size: 0.95rem;
+        }
+
+        #upload-form input[type="file"] {
+            margin: 0 0.75rem;
+            font-size: 0.9rem;
+            color: var(--meta);
+        }
+
+        #upload-status {
+            margin-left: 0.75rem;
+            color: var(--meta);
+            font-size: 0.9rem;
         }
 
         h1 {
-            color: #333;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 10px;
+            margin: 0 0 1.5rem;
+            font-size: 2rem;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            color: var(--fg);
+        }
+
+        .empty-state {
+            color: var(--meta);
+            font-size: 0.95rem;
+        }
+
+        .empty-state code {
+            background: var(--card);
+            padding: 0.15rem 0.4rem;
+            border-radius: 6px;
+            font-size: 0.85em;
+            border: 1px solid var(--card-border);
         }
 
         .section-title {
-            margin-top: 30px;
-            color: #2c3e50;
-            font-size: 1.3em;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--fg);
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
         }
 
         .book-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1rem;
         }
 
         .book-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s;
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 18px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 16px var(--card-shadow);
+            transition: transform 0.4s var(--ease-spring), box-shadow 0.4s var(--ease-spring);
+            will-change: transform;
+        }
+
+        .book-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px var(--card-hover-shadow);
+        }
+
+        .book-card:active {
+            transform: translateY(-1px) scale(0.98);
+            transition: transform 0.1s var(--ease-press);
         }
 
         .book-title {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 10px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.01em;
+            line-height: 1.3;
         }
 
         .book-meta {
-            color: #666;
-            font-size: 0.9em;
-            margin-bottom: 15px;
+            color: var(--meta);
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
         }
 
         .progress-info {
-            color: #27ae60;
-            font-size: 0.85em;
-            margin-bottom: 10px;
+            color: var(--success);
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
             font-weight: 500;
         }
 
         .btn-group {
             display: flex;
-            gap: 10px;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
 
@@ -75,85 +194,126 @@
             display: inline-block;
             color: white;
             text-decoration: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            font-size: 0.9em;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
             text-align: center;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s var(--ease-press), box-shadow 0.2s ease, background 0.2s ease;
+            will-change: transform;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
         }
 
         .btn-primary {
-            background: #27ae60;
+            background: var(--accent);
         }
 
         .btn-primary:hover {
-            background: #219955;
+            background: var(--accent-hover);
         }
 
         .btn-secondary {
-            background: #3498db;
+            background: var(--accent-secondary);
         }
 
         .btn-secondary:hover {
-            background: #2980b9;
+            filter: brightness(1.1);
         }
 
         .btn-outline {
-            border: 1px solid #c0392b;
-            color: #c0392b;
+            border: 1px solid var(--danger);
+            color: var(--danger);
             background: transparent;
-            cursor: pointer;
         }
 
         .btn-outline:hover {
-            background: #c0392b;
+            background: var(--danger);
             color: #fff;
         }
 
         .btn-muted {
-            border: 1px solid #7f8c8d;
-            color: #7f8c8d;
+            border: 1px solid var(--muted);
+            color: var(--muted);
             background: transparent;
-            cursor: pointer;
         }
 
         .btn-muted:hover {
-            background: #7f8c8d;
+            background: var(--muted);
             color: #fff;
         }
 
-        .book-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        .library-divider {
+            margin: 2.5rem 0 1.25rem;
+            border: none;
+            border-top: 1px solid var(--card-border);
         }
 
-        .library-divider {
-            margin: 40px 0 20px;
-            border: none;
-            border-top: 2px dashed #bdc3c7;
+        /* Reveal animation */
+        .reveal {
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.6s var(--ease-spring), transform 0.6s var(--ease-spring);
+        }
+
+        .reveal.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .reveal {
+                opacity: 1;
+                transform: none;
+                transition: opacity 0.2s ease;
+            }
+
+            .book-card,
+            .book-card:hover,
+            .book-card:active {
+                transition: box-shadow 0.2s ease;
+                transform: none;
+            }
+
+            .btn:active {
+                transform: none;
+            }
+        }
+
+        @media (prefers-reduced-transparency: reduce) {
+            #upload-form {
+                background: var(--card);
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+            }
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <form id="upload-form" method="post" enctype="multipart/form-data"
-            style="margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08);">
-            <label style="font-weight: 500; color: #2c3e50;">上传新书（epub）:</label>
-            <input type="file" name="file" accept=".epub" required style="margin: 0 10px;">
+        <form id="upload-form" method="post" enctype="multipart/form-data" class="reveal">
+            <label>上传新书（epub）:</label>
+            <input type="file" name="file" accept=".epub" required>
             <button type="submit" class="btn btn-primary">上传</button>
-            <span id="upload-status" style="margin-left: 15px; color: #888; font-size: 0.95em;"></span>
+            <span id="upload-status"></span>
         </form>
-        <h1>Library</h1>
+
+        <h1 class="reveal">Library</h1>
 
         {% if not current_books and not completed_books %}
-        <p>No processed books found. Run <code>reader3.py</code> on an epub first.</p>
+        <p class="empty-state reveal">No processed books found. Run <code>reader3.py</code> on an epub first.</p>
         {% endif %}
 
         {% if current_books %}
-        <div class="section-title">Currently Reading</div>
+        <div class="section-title reveal">Currently Reading</div>
         <div class="book-grid">
             {% for book in current_books %}
-            <div class="book-card">
+            <div class="book-card reveal">
                 <div class="book-title">{{ book.title }}</div>
                 <div class="book-meta">
                     {{ book.author }}<br>
@@ -181,11 +341,11 @@
         {% endif %}
 
         {% if completed_books %}
-        <hr class="library-divider">
-        <div class="section-title">Finished</div>
+        <hr class="library-divider reveal">
+        <div class="section-title reveal">Finished</div>
         <div class="book-grid">
             {% for book in completed_books %}
-            <div class="book-card">
+            <div class="book-card reveal">
                 <div class="book-title">{{ book.title }}</div>
                 <div class="book-meta">
                     {{ book.author }}<br>
@@ -277,6 +437,7 @@
                 status.textContent = '上传失败: ' + err.message;
             }
         });
+
         async function updateBookStatus(bookId, done) {
             try {
                 const response = await fetch(`/api/book-status/${bookId}`, {
@@ -294,6 +455,28 @@
                 alert('Unable to update book status: ' + err.message);
             }
         }
+
+        // Reveal on scroll
+        (() => {
+            const revealEls = document.querySelectorAll('.reveal');
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+                revealEls.forEach((el) => el.classList.add('in-view'));
+                return;
+            }
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('in-view');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            revealEls.forEach((el) => observer.observe(el));
+        })();
     </script>
 </body>
 
